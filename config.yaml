@@ -1,6 +1,6 @@
 signals:
   sig1:
-    signal_name: signal_1
+    display_name: signal_1
     units: F
     min_value: 0
     max_value: 100
@@ -8,7 +8,7 @@ signals:
     no_change_probability: 0.3
     plot_color: red
   sig2:
-    signal_name: signal_2
+    display_name: signal_2
     units: F
     min_value: 0
     max_value: 200
@@ -16,7 +16,7 @@ signals:
     no_change_probability: 0.3
     plot_color: purple
   sig3:
-    signal_name: signal_3
+    display_name: signal_3
     units: F
     min_value: 0
     max_value: 300
@@ -27,10 +27,16 @@ signals:
 
 derived_signals:
   sig4:
-    signal_name: signal_4
+    display_name: signal_4
     units: F
-    equation: sig1 + sig2
+    equation: abs(sig1 - sig2)
     plot_color: brown
+  sig5:
+    display_name: signal_5
+    units: F
+    equation: max(sig1, sig2)
+    plot_color: brown
+
 
 ramp_config:
   ramp_start_time:

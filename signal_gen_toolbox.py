@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from pprint import pprint
+import sympy as sp
 
 np.random.seed(0)
 
@@ -120,6 +121,25 @@ def _generate_ramp_signal(signal_name, signal_config, ramp_config, end_time_pad=
     return df, metadata
 
 
+def _add_derived_signals(df_merged, config):
+
+    for signal in config['derived_signals'].keys():
+
+        eqn = config['derived_signals'][signal]['equation']
+        f = sp.sympify(eqn)
+
+        variables = sorted(list(f.free_symbols), key=lambda s: s.name)
+        numerical_func = sp.lambdify(variables, f, 'numpy')
+        variables_str = [str(v) for v in variables]
+
+        inputs = [df_merged[variable].to_numpy() for variable in variables_str]
+        derived_signal_values = numerical_func(*inputs)
+
+        df_merged[signal] = derived_signal_values
+
+    return df_merged
+
+
 def generate_ramp_loadcase(config):
 
     dfs = []
@@ -141,6 +161,9 @@ def generate_ramp_loadcase(config):
 
     df_parameters = pd.DataFrame.from_dict(metadatas, orient="index")
 
+
+    df_merged = _add_derived_signals(df_merged, config)
+
     return df_merged, df_parameters
 
 
@@ -156,14 +179,20 @@ def plot_loadcase(df_merged, config, loadcase_name = None):
 
     fig, ax = plt.subplots(len(df_merged.columns))
     for i, signal_name in enumerate(df_merged.columns):
-        plot_color = config['signals'][signal_name].get('plot_color', 'gray')
-        ax[i].plot(df_merged.index, df_merged[signal_name], label = f'{signal_name}', linewidth = 2, c= plot_color)
 
-        yrange = config['signals'][signal_name]['max_value'] - config['signals'][signal_name]['min_value']
-        plot_min = config['signals'][signal_name]['min_value'] - 0.05 * yrange
-        plot_max = config['signals'][signal_name]['max_value'] + 0.05 * yrange
 
-        ax[i].set_ylim(plot_min, plot_max)
+        if signal_name in config['signals']:
+            plot_color = config['signals'][signal_name].get('plot_color', 'gray')
+            yrange = config['signals'][signal_name]['max_value'] - config['signals'][signal_name]['min_value']
+            plot_min = config['signals'][signal_name]['min_value'] - 0.05 * yrange
+            plot_max = config['signals'][signal_name]['max_value'] + 0.05 * yrange
+            ax[i].plot(df_merged.index, df_merged[signal_name], label = f'{signal_name}', linewidth = 2, c= plot_color)
+            ax[i].set_ylim(plot_min, plot_max)
+
+        elif signal_name in config['derived_signals']:
+            plot_color = config['derived_signals'][signal_name].get('plot_color', 'gray')
+            ax[i].plot(df_merged.index, df_merged[signal_name], label = f'{signal_name}', linewidth = 2, c= plot_color)
+
         ax[i].legend(loc = 1)
 
     fig.suptitle(f"{loadcase_name}")
