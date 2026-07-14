@@ -1,0 +1,41 @@
+signals:
+  sig1:
+    signal_name: signal_1
+    units: F
+    min_value: 0
+    max_value: 100
+    max_rate_of_change: 10
+  sig2:
+    signal_name: signal_2
+    units: F
+    min_value: 0
+    max_value: 200
+    max_rate_of_change: 10
+  sig3:
+    signal_name: signal_3
+    units: F
+    min_value: 0
+    max_value: 300
+    max_rate_of_change: 1
+      
+
+derived_signals:
+  sig4:
+    signal_name: signal_4
+    units: F
+    equation: sig1 + sig2
+
+
+ramp_config:
+  ramp_start:
+    min_value: 1
+    max_value: 5
+  ramp_duration:
+    min_value : 0
+    max_value: 5
+  hold_duration:
+    min_value : 0
+    max_value : 10
+  end_time:
+    value : 10
+
