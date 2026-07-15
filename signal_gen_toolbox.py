@@ -163,6 +163,8 @@ def generate_ramp_loadcase(config):
 
 
     df_merged = _add_derived_signals(df_merged, config)
+    df_merged.index.name = "t"
+
 
     return df_merged, df_parameters
 
@@ -191,9 +193,9 @@ def plot_loadcase(df_merged, config, loadcase_name = None):
 
         elif signal_name in config['derived_signals']:
             plot_color = config['derived_signals'][signal_name].get('plot_color', 'gray')
-            ax[i].plot(df_merged.index, df_merged[signal_name], label = f'{signal_name}', linewidth = 2, c= plot_color)
+            ax[i].plot(df_merged.index, df_merged[signal_name], label = f'{signal_name}\n(derived)', linewidth = 2, c= plot_color)
 
-        ax[i].legend(loc = 1)
+        ax[i].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
 
     fig.suptitle(f"{loadcase_name}")
     fig.tight_layout()
