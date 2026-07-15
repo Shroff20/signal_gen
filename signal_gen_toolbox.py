@@ -7,12 +7,29 @@ import sympy as sp
 
 np.random.seed(0)
 
-def _get_sample(d, sample_type="uniform"):
-
-    if sample_type == "uniform":
-        return np.random.uniform(d["min_value"], d["max_value"])
+def _get_sample(d, sample_type="uniform", N = 1):
+    
+    if "value" in d:
+        samples =  np.full(N, d["value"])
+    elif sample_type == "uniform":
+        samples = np.random.uniform(d["min_value"], d["max_value"], size = N)
+    elif sample_type == "LHS":
+        samples = np.linspace(d["min_value"], d["max_value"], N)
+        rng = np.random.default_rng()
+        samples = rng.permutation(samples)
     else:
         raise ValueError(f"Unsupported sample_type: {sample_type}")
+    
+    if N ==1:
+        samples = samples.flatten()[0]
+
+    #print(d, samples)
+
+    return samples
+
+
+
+
 
 
 def _clip_signal(t, y, min_val, max_val):
@@ -59,13 +76,21 @@ def _clip_signal(t, y, min_val, max_val):
     return t, y
 
 
+def _generate_LHS_samples(config, N):
+
+
+
+
+
+    pass 
+
 
 def _generate_ramp_signal(signal_name, signal_config, ramp_config, end_time_pad=1):
 
     initial_value = _get_sample(signal_config)
     ramp_start_time = _get_sample(ramp_config["ramp_start_time"])
     ramp_duration = _get_sample(ramp_config["ramp_duration"])
-    end_time = ramp_config["end_time"]
+    end_time = _get_sample(ramp_config["end_time"])
     hold_duration = _get_sample(ramp_config["hold_duration"])
 
     if np.random.uniform(0, 1) > signal_config.get("no_change_probability", 0):
@@ -103,7 +128,7 @@ def _generate_ramp_signal(signal_name, signal_config, ramp_config, end_time_pad=
         df = df.sort_index()
         df = df.interpolate(method="index")
 
-    I = df.index <= ramp_config["end_time"]
+    I = df.index <= ramp_config["end_time"]['value']
     df = df.loc[I]
 
     signal_range = df[signal_name].max() - df[signal_name].min()
@@ -156,7 +181,7 @@ def generate_ramp_loadcase(config):
     df_merged = df_merged.sort_index()
     df_merged = df_merged.interpolate(method="index")
 
-    I = df_merged.index <= config["ramp_config"]["end_time"]
+    I = df_merged.index <= config["ramp_config"]["end_time"]['value']
     df_merged = df_merged.loc[I]
 
     df_parameters = pd.DataFrame.from_dict(metadatas, orient="index")

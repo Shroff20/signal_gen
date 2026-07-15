@@ -48,5 +48,6 @@ ramp_config:
   hold_duration:
     min_value : 0
     max_value : 100
-  end_time: 200
+  end_time: 
+    value: 200
 
