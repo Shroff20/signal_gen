@@ -5,25 +5,40 @@ import pandas as pd
 from pprint import pprint
 import sympy as sp
 
-np.random.seed(0)
 
-def _get_sample(d, sample_type="uniform", N = 1):
-    
-    if "value" in d:
-        samples =  np.full(N, d["value"])
-    elif sample_type == "uniform":
-        samples = np.random.uniform(d["min_value"], d["max_value"], size = N)
-    elif sample_type == "LHS":
-        samples = np.linspace(d["min_value"], d["max_value"], N)
-        rng = np.random.default_rng()
-        samples = rng.permutation(samples)
-    else:
-        raise ValueError(f"Unsupported sample_type: {sample_type}")
-    
-    if N ==1:
-        samples = samples.flatten()[0]
 
-    #print(d, samples)
+
+def generate_samples(config, N = 1, mode = 'LHS', seed = 0):
+
+    # Generate samples for each signal based on the configuration
+    np.random.seed(seed)
+    generation_keys = ['signals', 'signal_generation']
+
+    samples = {}
+
+    for key in generation_keys:
+        samples[key] = {}
+
+        for signal_name, data in config[key].items():
+            samples[key][signal_name] = {}
+
+            for param_name, d in data['parameters'].items():
+                distribution_type = d['distribution_type']
+                if distribution_type == 'uniform':
+
+                    if mode == 'random':
+                        sample_vec = np.random.uniform(d["min_value"], d["max_value"], size = N)
+                    elif mode == 'LHS':
+                        rng = np.random.default_rng(seed)
+                        sample_vec = np.linspace(d["min_value"], d["max_value"], N)
+                        rng.shuffle(sample_vec)
+                    else:
+                        raise ValueError(f"mode={mode} is not recognized")
+                    
+                    samples[key][signal_name][param_name] = sample_vec
+                
+                else:
+                    raise ValueError(f"distribution_type={distribution_type} is not recognized")
 
     return samples
 

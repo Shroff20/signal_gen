@@ -2,26 +2,46 @@ signals:
   sig1:
     display_name: signal_1
     units: F
-    min_value: 0
-    max_value: 100
-    max_rate_of_change: 10
-    no_change_probability: 0.3
+    parameters:
+      magnitude: 
+        distribution_type: uniform
+        min_value: 0
+        max_value: 100
+      rate_of_change: 
+        distribution_type: uniform
+        min_value: -10
+        max_value: 10
+        set_to_0_probability: 0.3
     plot_color: red
+
   sig2:
     display_name: signal_2
     units: F
-    min_value: 0
-    max_value: 200
-    max_rate_of_change: 10
-    no_change_probability: 0.3
+    parameters:
+      magnitude: 
+        distribution_type: uniform
+        min_value: 0
+        max_value: 200
+      rate_of_change: 
+        distribution_type: uniform
+        min_value: -10
+        max_value: 10
+        set_to_0_probability: 0.3
     plot_color: purple
+    
   sig3:
     display_name: signal_3
     units: F
-    min_value: 0
-    max_value: 300
-    max_rate_of_change: 100
-    no_change_probability: 0.3
+    parameters:
+      magnitude: 
+        distribution_type: uniform
+        min_value: 0
+        max_value: 300
+      rate_of_change: 
+        distribution_type: uniform
+        min_value: -100
+        max_value: 100
+        set_to_0_probability: 0.3
     plot_color: blue
       
 
@@ -38,16 +58,24 @@ derived_signals:
     plot_color: brown
 
 
-ramp_config:
-  ramp_start_time:
-    min_value: 1
-    max_value: 100
-  ramp_duration:
-    min_value : 0
-    max_value: 50
-  hold_duration:
-    min_value : 0
-    max_value : 100
-  end_time: 
-    value: 200
+signal_generation:
+  ramp:
+    description: ramp jobs that contain symmetrical trapezoidal waveforms
+    parameters:
+      ramp_start_time: 
+        distribution_type: uniform
+        min_value: 0
+        max_value: 100
+      ramp_duration:
+        distribution_type: uniform
+        min_value: 0
+        max_value: 100
+      hold_duration:
+        distribution_type: uniform
+        min_value: 0
+        max_value: 100
+      end_time: 
+        distribution_type: uniform
+        min_value: 200
+        max_value: 200
 
