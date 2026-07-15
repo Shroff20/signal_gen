@@ -8,7 +8,7 @@ import sympy as sp
 
 
 
-def generate_samples(config, N = 1, mode = 'LHS', seed = 0):
+def generate_samples(config, N = 1, mode = 'LHS', seed = None):
 
     # Generate samples for each signal based on the configuration
     np.random.seed(seed)
@@ -91,29 +91,54 @@ def _clip_signal(t, y, min_val, max_val):
     return t, y
 
 
-def _generate_LHS_samples(config, N):
+def generate_ramp_signals(sample_dict, config, idx):
+    
+
+    dfs = []
+    metadatas = {}
+
+    for signal_name, signal_config in config["signals"].items():
+
+
+        initial_value = sample_dict['signals'][signal_name]['magnitude'][idx]
+        ramp_rate = sample_dict['signals'][signal_name]['rate_of_change'][idx]  # TODO:  add probability to set to 0
+    
+        ramp_start_time = sample_dict['signal_generation']['ramp']['ramp_start_time'][idx]
+        ramp_duration = sample_dict['signal_generation']['ramp']['ramp_duration'][idx]
+        end_time = sample_dict['signal_generation']['ramp']['end_time'][idx]
+        hold_duration = sample_dict['signal_generation']['ramp']['hold_duration'][idx]
+
+        min_magnitude = config['signals'][signal_name]['parameters']['magnitude']['min_value']
+        max_magnitude = config['signals'][signal_name]['parameters']['magnitude']['max_value']
+
+        df, metadata = _generate_ramp_signal(signal_name, initial_value, ramp_rate, ramp_duration, ramp_start_time, hold_duration, end_time, min_magnitude, max_magnitude)
+
+        dfs.append(df)
+        metadatas[signal_name] = metadata
+
+    df_signals = pd.concat(dfs, axis=1)
+    df_signals = df_signals.sort_index()
+    df_signals = df_signals.interpolate(method="index")
+
+    end_time = config['signal_generation']['ramp']['parameters']['end_time']['min_value']
+    df_signals = df_signals.loc[df_signals.index <= end_time]
+
+    df_parameters = pd.DataFrame.from_dict(metadatas, orient="index")
+
+
+    df_signals = _add_derived_signals(df_signals, config)
+    df_signals.index.name = "t"
+
+
+    return df_signals, df_parameters
 
 
 
 
 
-    pass 
 
+def _generate_ramp_signal(signal_name, initial_value, ramp_rate, ramp_duration, ramp_start_time, hold_duration, end_time, min_magnitude, max_magnitude,  end_time_pad=1):
 
-def _generate_ramp_signal(signal_name, signal_config, ramp_config, end_time_pad=1):
-
-    initial_value = _get_sample(signal_config)
-    ramp_start_time = _get_sample(ramp_config["ramp_start_time"])
-    ramp_duration = _get_sample(ramp_config["ramp_duration"])
-    end_time = _get_sample(ramp_config["end_time"])
-    hold_duration = _get_sample(ramp_config["hold_duration"])
-
-    if np.random.uniform(0, 1) > signal_config.get("no_change_probability", 0):
-        ramp_rate = np.random.uniform(
-            -signal_config["max_rate_of_change"], signal_config["max_rate_of_change"]
-        )
-    else:
-        ramp_rate = 0
 
     final_value = initial_value + ramp_rate * ramp_duration
 
@@ -134,17 +159,19 @@ def _generate_ramp_signal(signal_name, signal_config, ramp_config, end_time_pad=
     t = np.array([t0, t1, t2, t3, t4, t5])
     y = np.array([y0, y1, y2, y3, y4, y5])
 
-    t, y = _clip_signal(t, y, signal_config["min_value"], signal_config["max_value"])
+    t, y = _clip_signal(t, y, min_magnitude, max_magnitude)
 
     df = pd.DataFrame(index=t, data={signal_name: y})
+    df = df[~df.index.duplicated(keep='first')]
 
     if end_time not in df.index:
         df.loc[end_time] = np.nan
         df = df.sort_index()
         df = df.interpolate(method="index")
 
-    I = df.index <= ramp_config["end_time"]['value']
+    I = df.index <= end_time
     df = df.loc[I]
+
 
     signal_range = df[signal_name].max() - df[signal_name].min()
     effective_ramp_duration = np.abs(signal_range / ramp_rate) if ramp_rate != 0 else 0
@@ -152,6 +179,7 @@ def _generate_ramp_signal(signal_name, signal_config, ramp_config, end_time_pad=
     metadata = {
         "initial_value": initial_value,
         "ramp_start_time": ramp_start_time,
+        "ramp_duration": ramp_duration,
         "effective_ramp_duration": effective_ramp_duration,
         "ramp_rate": ramp_rate,
         "hold_duration": hold_duration,
@@ -180,34 +208,6 @@ def _add_derived_signals(df_merged, config):
     return df_merged
 
 
-def generate_ramp_loadcase(config):
-
-    dfs = []
-    metadatas = {}
-
-    for signal_name, signal_config in config["signals"].items():
-        df, metadata = _generate_ramp_signal(
-            signal_name, signal_config, config["ramp_config"]
-        )
-        dfs.append(df)
-        metadatas[signal_name] = metadata
-
-    df_merged = pd.concat(dfs, axis=1)
-    df_merged = df_merged.sort_index()
-    df_merged = df_merged.interpolate(method="index")
-
-    I = df_merged.index <= config["ramp_config"]["end_time"]['value']
-    df_merged = df_merged.loc[I]
-
-    df_parameters = pd.DataFrame.from_dict(metadatas, orient="index")
-
-
-    df_merged = _add_derived_signals(df_merged, config)
-    df_merged.index.name = "t"
-
-
-    return df_merged, df_parameters
-
 
 def load_config(fn_yaml):
     with open(fn_yaml, "r") as f:
@@ -225,9 +225,12 @@ def plot_loadcase(df_merged, config, loadcase_name = None):
 
         if signal_name in config['signals']:
             plot_color = config['signals'][signal_name].get('plot_color', 'gray')
-            yrange = config['signals'][signal_name]['max_value'] - config['signals'][signal_name]['min_value']
-            plot_min = config['signals'][signal_name]['min_value'] - 0.05 * yrange
-            plot_max = config['signals'][signal_name]['max_value'] + 0.05 * yrange
+
+            ymin = config['signals'][signal_name]['parameters']['magnitude']['min_value']
+            ymax=  config['signals'][signal_name]['parameters']['magnitude']['max_value']
+            yrange = ymax - ymin
+            plot_min = ymin - 0.05 * yrange
+            plot_max = ymax + 0.05 * yrange
             ax[i].plot(df_merged.index, df_merged[signal_name], label = f'{signal_name}', linewidth = 2, c= plot_color)
             ax[i].set_ylim(plot_min, plot_max)
 

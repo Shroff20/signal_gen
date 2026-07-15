@@ -64,16 +64,16 @@ signal_generation:
     parameters:
       ramp_start_time: 
         distribution_type: uniform
-        min_value: 0
-        max_value: 100
+        min_value: 1
+        max_value: 10
       ramp_duration:
         distribution_type: uniform
         min_value: 0
-        max_value: 100
+        max_value: 50
       hold_duration:
         distribution_type: uniform
         min_value: 0
-        max_value: 100
+        max_value: 50
       end_time: 
         distribution_type: uniform
         min_value: 200
