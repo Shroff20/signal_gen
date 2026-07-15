@@ -6,39 +6,53 @@ from pprint import pprint
 import sympy as sp
 
 
+np.random.seed(0)
 
 
 def generate_samples(config, N = 1, mode = 'LHS', seed = None):
 
     # Generate samples for each signal based on the configuration
-    np.random.seed(seed)
-    generation_keys = ['signals', 'signal_generation']
 
+    signals = config['signals'].keys()
     samples = {}
 
-    for key in generation_keys:
-        samples[key] = {}
+    for signal in signals:
+        samples[signal] = {}
 
-        for signal_name, data in config[key].items():
-            samples[key][signal_name] = {}
+        for param_name, d in config['signals'][signal]['parameters'].items():
+            distribution_type = d['distribution_type']
+            if distribution_type == 'uniform':
 
-            for param_name, d in data['parameters'].items():
-                distribution_type = d['distribution_type']
-                if distribution_type == 'uniform':
-
-                    if mode == 'random':
-                        sample_vec = np.random.uniform(d["min_value"], d["max_value"], size = N)
-                    elif mode == 'LHS':
-                        rng = np.random.default_rng(seed)
-                        sample_vec = np.linspace(d["min_value"], d["max_value"], N)
-                        rng.shuffle(sample_vec)
-                    else:
-                        raise ValueError(f"mode={mode} is not recognized")
-                    
-                    samples[key][signal_name][param_name] = sample_vec
-                
+                if mode == 'random':
+                    sample_vec = np.random.uniform(d["min_value"], d["max_value"], size = N)
+                elif mode == 'LHS':
+                    rng = np.random.default_rng(seed)
+                    sample_vec = np.linspace(d["min_value"], d["max_value"], N)
+                    rng.shuffle(sample_vec)
                 else:
-                    raise ValueError(f"distribution_type={distribution_type} is not recognized")
+                    raise ValueError(f"mode={mode} is not recognized")
+                
+                samples[signal][param_name] = sample_vec
+            else:
+                raise ValueError(f"distribution_type={distribution_type} is not recognized")
+            
+        for param_name, d in config['signal_generation']['ramp']['parameters'].items():
+            distribution_type = d['distribution_type']
+            if distribution_type == 'uniform':
+                if mode == 'random':
+                    sample_vec = np.random.uniform(d["min_value"], d["max_value"], size = N)
+                elif mode == 'LHS':
+                    rng = np.random.default_rng(seed)
+                    sample_vec = np.linspace(d["min_value"], d["max_value"], N)
+                    rng.shuffle(sample_vec)
+                else:
+                    raise ValueError(f"mode={mode} is not recognized")
+                
+                samples[signal][param_name] = sample_vec
+            else:
+                raise ValueError(f"distribution_type={distribution_type} is not recognized")      
+                
+
 
     return samples
 
@@ -100,13 +114,13 @@ def generate_ramp_signals(sample_dict, config, idx):
     for signal_name, signal_config in config["signals"].items():
 
 
-        initial_value = sample_dict['signals'][signal_name]['magnitude'][idx]
-        ramp_rate = sample_dict['signals'][signal_name]['rate_of_change'][idx]  # TODO:  add probability to set to 0
+        initial_value = sample_dict[signal_name]['magnitude'][idx]
+        ramp_rate = sample_dict[signal_name]['rate_of_change'][idx]  # TODO:  add probability to set to 0
     
-        ramp_start_time = sample_dict['signal_generation']['ramp']['ramp_start_time'][idx]
-        ramp_duration = sample_dict['signal_generation']['ramp']['ramp_duration'][idx]
-        end_time = sample_dict['signal_generation']['ramp']['end_time'][idx]
-        hold_duration = sample_dict['signal_generation']['ramp']['hold_duration'][idx]
+        ramp_start_time = sample_dict[signal_name]['ramp_start_time'][idx]
+        ramp_duration = sample_dict[signal_name]['ramp_duration'][idx]
+        end_time = sample_dict[signal_name]['end_time'][idx]
+        hold_duration = sample_dict[signal_name]['hold_duration'][idx]
 
         min_magnitude = config['signals'][signal_name]['parameters']['magnitude']['min_value']
         max_magnitude = config['signals'][signal_name]['parameters']['magnitude']['max_value']
