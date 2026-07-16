@@ -53,8 +53,13 @@ def generate_samples(config, N = 1, mode = 'LHS', seed = None):
                 raise ValueError(f"distribution_type={distribution_type} is not recognized")      
                 
 
+    df_samples = pd.concat({k: pd.DataFrame(v) for k, v in samples.items()}, axis=1)
+    df_samples.index.name = "loadcase"
 
-    return samples
+
+
+    return df_samples
+
 
 
 
@@ -105,22 +110,24 @@ def _clip_signal(t, y, min_val, max_val):
     return t, y
 
 
-def generate_ramp_signals(sample_dict, config, idx):
+def generate_ramp_signals(df_samples, config, idx):
     
 
     dfs = []
     metadatas = {}
 
-    for signal_name, signal_config in config["signals"].items():
+    signal_names = df_samples.columns.levels[0]
+
+    for signal_name in signal_names:
 
 
-        initial_value = sample_dict[signal_name]['magnitude'][idx]
-        ramp_rate = sample_dict[signal_name]['rate_of_change'][idx]  # TODO:  add probability to set to 0
+        initial_value = df_samples.loc[idx, (signal_name, 'magnitude')]
+        ramp_rate = df_samples.loc[idx, (signal_name, 'rate_of_change')]  # TODO:  add probability to set to 0
     
-        ramp_start_time = sample_dict[signal_name]['ramp_start_time'][idx]
-        ramp_duration = sample_dict[signal_name]['ramp_duration'][idx]
-        end_time = sample_dict[signal_name]['end_time'][idx]
-        hold_duration = sample_dict[signal_name]['hold_duration'][idx]
+        ramp_start_time = df_samples.loc[idx, (signal_name, 'ramp_start_time')]
+        ramp_duration = df_samples.loc[idx, (signal_name, 'ramp_duration')]
+        end_time = df_samples.loc[idx, (signal_name, 'end_time')]
+        hold_duration = df_samples.loc[idx, (signal_name, 'hold_duration')]
 
         min_magnitude = config['signals'][signal_name]['parameters']['magnitude']['min_value']
         max_magnitude = config['signals'][signal_name]['parameters']['magnitude']['max_value']
